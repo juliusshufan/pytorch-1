@@ -153,6 +153,7 @@ std::tuple<Tensor, Tensor, Tensor> batch_norm_backward_cpu_template(const Tensor
                                                                     const Tensor& running_mean, const Tensor& running_var, const Tensor& save_mean, const Tensor& save_invstd,
                                                                     bool train, double eps, std::array<bool,3> grad_input_mask) {
 
+  // TODO: process mkldnn tensor?
   using accscalar_t = at::acc_type<scalar_t, false>;
 
   Tensor grad_input;
@@ -319,6 +320,20 @@ std::tuple<Tensor, Tensor, Tensor, int64_t> _batch_norm_impl_index(
              std::make_tuple(2));
   }
 
+  bool use_mkldnn = (at::mkldnn_is_acceptable(input)
+               && (input.ndimension() == 4 || input.ndimension() == 5)
+               && (weight.defined() && bias.defined())
+               && ((running_mean.defined() && running_var.defined())
+                 ||(!running_mean.defined() && !running_var.defined() && training))
+               );
+
+  if (use_mkldnn) {
+    return std::tuple_cat(
+            at::mkldnn_batch_norm(
+              input, weight, bias, running_mean, running_var, training, momentum, eps),
+            std::make_tuple(3));
+  }
+
   return std::tuple_cat(
            at::native_batch_norm(
              input, weight, bias, running_mean, running_var, training, momentum, eps),
@@ -337,6 +352,8 @@ std::tuple<Tensor, Tensor, Tensor> _batch_norm_impl_index_backward(
     return at::cudnn_batch_norm_backward(input, grad_output, weight, running_mean, running_var, save_mean, save_var_transform, epsilon);
   } else if (impl_index == 2) {
     return at::miopen_batch_norm_backward(input, grad_output, weight, running_mean, running_var, save_mean, save_var_transform, epsilon);
+  } else if (impl_index == 3) {
+    return at::mkldnn_batch_norm_backward(input, grad_output, weight, running_mean, running_var, save_mean, save_var_transform, epsilon);
   }
   AT_ASSERTM(false, "Unsupported impl_index in _batch_norm_impl_index_backward: ", impl_index);
 }

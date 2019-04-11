@@ -99,5 +99,18 @@ class TestMkldnn(TestCase):
         model2 = deepcopy(model1).mkldnn()
         self.assertEqual(model1(x), model2(x))
 
+    def test_batchnorm2d_inference(self):
+        x = torch.randn(20, 100, 35, 45, dtype=torch.float32)
+
+        model1 = torch.nn.BatchNorm2d(100).float()
+        model2 = deepcopy(model1).mkldnn()
+        self.assertEqual(model1(x), model2(x))
+
+    def test_batchnorm3d_inference(self):
+        x = torch.randn(20, 100, 35, 45, 10, dtype=torch.float32)
+        model1 = torch.nn.BatchNorm3d(100).float()
+        model2 = deepcopy(model1).mkldnn()
+        self.assertEqual(model1(x), model2(x))
+
 if __name__ == '__main__':
     run_tests()

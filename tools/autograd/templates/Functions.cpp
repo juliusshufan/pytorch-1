@@ -1933,6 +1933,7 @@ std::tuple<Tensor, Tensor, Tensor> batchnorm_double_backward(
 
   bool affine = gamma.defined();
   // TODO: Do we have a ScalarOrTensor type?  Would such a thing exist?
+  // we need tranfer mkldnn tensor to cpu tensor?
   Tensor gamma_expanded;
   Tensor ggG_expanded, ggB_expanded;
   if (affine) {

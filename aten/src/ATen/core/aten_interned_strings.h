@@ -471,6 +471,8 @@ _(aten, mkldnn_convolution_transpose) \
 _(aten, mkldnn_convolution_transpose_backward) \
 _(aten, mkldnn_convolution_transpose_backward_input) \
 _(aten, mkldnn_convolution_transpose_backward_weights) \
+_(aten, mkldnn_batch_norm) \
+_(aten, mkldnn_batch_norm_backward) \
 _(aten, mm) \
 _(aten, mode) \
 _(aten, mse_loss) \
