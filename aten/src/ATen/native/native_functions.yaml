@@ -1473,6 +1473,8 @@
 - func: mkldnn_convolution_backward(Tensor self, Tensor grad_output, Tensor weight, int[] padding, int[] stride, int[] dilation, int groups, bool[3] output_mask) -> (Tensor, Tensor, Tensor)
   matches_jit_signature: True
 
+- func: fused_sgd_step(Tensor(a!) param, Tensor(b!) gradient, Tensor(c!) momentum_buf, float learning_rate, float momentum, float dampening, float weight_decay, bool nesterov, bool momentum_buf_defined) -> (Tensor(a!), Tensor(b!), Tensor(c!))
+
 - func: miopen_batch_norm(Tensor input, Tensor weight, Tensor? bias, Tensor? running_mean, Tensor? running_var, bool training, float exponential_average_factor, float epsilon) -> (Tensor, Tensor, Tensor)
   matches_jit_signature: True
   dispatch:

@@ -89,6 +89,17 @@ class SGD(Optimizer):
                 if p.grad is None:
                     continue
                 d_p = p.grad.data
+                if not d_p.is_sparse and not d_p.is_cuda:
+                    param_state = self.state[p]
+                    if 'momentum_buffer' not in param_state:
+                        buf = param_state['momentum_buffer'] = torch.zeros_like(d_p)
+                        momentum_buf_defined = False
+                    else:
+                        buf = param_state['momentum_buffer']
+                        momentum_buf_defined = True
+                    torch.fused_sgd_step(p.data.contiguous(), d_p.contiguous(), buf.contiguous(),
+                            group['lr'], momentum, dampening, weight_decay, nesterov, momentum_buf_defined)
+                    continue
                 if weight_decay != 0:
                     d_p.add_(weight_decay, p.data)
                 if momentum != 0:
