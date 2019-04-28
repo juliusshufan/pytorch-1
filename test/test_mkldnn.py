@@ -118,6 +118,26 @@ class TestMkldnn(TestCase):
         x2 = x1.clone().to_mkldnn()
         self.assertEqual(torch.relu_(x1), torch.relu_(x2).to_dense())
 
+    def test_relu_backward(self):
+         x = torch.randn((4, 5), dtype=torch.float32) * 10
+         x1 = x.clone().requires_grad_()
+         x2 = x.clone().to_mkldnn().requires_grad_()
+         y1 = torch.relu(x1).sum()
+         y2 = torch.relu(x2).to_dense().sum()
+         y1.backward()
+         y2.backward()
+         self.assertEqual(x1.grad, x2.grad.to_dense())
+         # inplace
+         x1 = x.clone().requires_grad_()
+         x2 = x.clone().to_mkldnn().requires_grad_()
+         y1 = torch.relu_(x1.clone()).sum()
+         y2 = torch.relu_(x2.clone()).to_dense().sum()
+         y1.backward()
+         y2.backward()
+         self.assertEqual(x1.grad, x2.grad.to_dense())
+
+
+
     def test_max_pool2d(self):
         N = torch.randint(3, 10, (1,)).item()
         C = torch.randint(3, 10, (1,)).item()

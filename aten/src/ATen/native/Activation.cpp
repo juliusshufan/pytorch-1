@@ -22,6 +22,10 @@ Tensor & relu_(Tensor & self) {
   return at::threshold_(self, 0, 0);
 }
 
+Tensor relu_backward(const Tensor& grad_output, const Tensor& self) {
+  return at::threshold_backward(grad_output, self, 0);
+}
+
 Tensor selu(const Tensor & self) {
   return at::elu(self, SELU_ALPHA, SELU_SCALE);
 }
