@@ -211,13 +211,38 @@ class TestMkldnn(TestCase):
         C = torch.randint(3, 100, (1,)).item()
         x = torch.randn(N, C, 35, 45, dtype=torch.float32) * 10
 
-        # TODO: support training
-        for train in [False]:
-            bn = torch.nn.BatchNorm2d(C).float().train(train)
-            mkldnn_bn = mkldnn_utils.to_mkldnn(copy.deepcopy(bn))
-            self.assertEqual(
-                bn(x),
-                mkldnn_bn(x.to_mkldnn()).to_dense())
+        for train in [True, False]:
+            # TODO: support none affine
+            for affine in [True]:
+                for track_running_stats in [True, False]:
+                    bn = torch.nn.BatchNorm2d(C, affine=affine,
+                              track_running_stats=track_running_stats).float().train(train)
+                    mkldnn_bn = mkldnn_utils.to_mkldnn(copy.deepcopy(bn))
+                    self.assertEqual(
+                        bn(x),
+                        mkldnn_bn(x.to_mkldnn()).to_dense())
+
+    def test_batch_norm2d_backward(self):
+        N = torch.randint(3, 10, (1,)).item()
+        C = torch.randint(3, 100, (1,)).item()
+        x = torch.randn(N, C, 35, 45, dtype=torch.float32) * 10
+
+        # TODO: support none affine
+        for affine in [True]:
+            for track_running_stats in [True, False]:
+                x1 = x.clone().requires_grad_()
+                x2 = x.clone().to_mkldnn().requires_grad_()
+                bn = torch.nn.BatchNorm2d(C, affine=affine,
+                        track_running_stats=track_running_stats).float().train(True)
+                mkldnn_bn = mkldnn_utils.to_mkldnn(copy.deepcopy(bn))
+                y1 = bn(x1).sum()
+                y2 = mkldnn_bn(x2).to_dense().sum()
+                y1.backward()
+                y2.backward()
+                self.assertEqual(x1.grad, x2.grad.to_dense())
+                if affine:
+                    self.assertAlmostEqual(bn.weight.grad, mkldnn_bn.weight.grad.to_dense())
+                    self.assertEqual(bn.bias.grad, mkldnn_bn.bias.grad.to_dense())
 
     def test_add(self):
         N = torch.randint(3, 10, (1,)).item()
