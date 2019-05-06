@@ -19,7 +19,7 @@ import torch.distributed as dist
 
 TESTS = [
     'autograd',
-    'cpp_extensions',
+    #'cpp_extensions',
     'c10d',
     'cuda',
     'cuda_primary_ctx',
