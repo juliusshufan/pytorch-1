@@ -78,38 +78,34 @@ Tensor& mkldnn_add_(Tensor& self, const Tensor& other, Scalar alpha) {
 
 Tensor& mkldnn_mul_out(Tensor& result, const Tensor& self, const Tensor& other) {
   auto n = self.numel();
-  
+
   ideep::tensor& z = itensor_from_mkldnn(result);
   ideep::tensor& x = itensor_from_mkldnn(self);
+  // support mul(tenor, value) which be used in add backward
+  ideep::tensor y = other.is_mkldnn() ? itensor_from_mkldnn(other)
+      : itensor_from_mkldnn(other.expand_as(self).toType(CPU(kFloat)).to_mkldnn());
 
-  auto* z_ = static_cast<float *>(z.get_data_handle());
-  auto* x_ = static_cast<float *>(x.get_data_handle());
-
-  float* y_;
-  bool is_scalar = true;
-  if (other.ndimension() != 0) { 
-    is_scalar = false;
-    ideep::tensor& y = itensor_from_mkldnn(other);
-    y_ = static_cast<float *>(y.get_data_handle());
-  }
-
-  parallel_for(0, n, 1, [=](int64_t begin, int64_t end){
-    for (int64_t index = begin; index < end; index++) {
-      z_[index] = x_[index] * (is_scalar ?  other.item().to<float>(): y_[index]);
-    }
-  });
-
+  auto op = ideep::eltwise_binary::eltwise_binary_op(1);
+  ideep::eltwise_binary::compute<AllocForMKLDNN>(op, x, y, z);
 
   return result;
 }
 
 Tensor mkldnn_mul(const Tensor& self, const Tensor& other) {
-  Tensor result = new_with_sizes_mkldnn(self.sizes(), self.options());
-  return native::mkldnn_mul_out(result, self, other);
+  ideep::tensor& x = itensor_from_mkldnn(self);
+  // support mul(tenor, value) which be used in add backward
+  ideep::tensor y = other.is_mkldnn() ? itensor_from_mkldnn(other)
+      : itensor_from_mkldnn(other.expand_as(self).toType(CPU(kFloat)).to_mkldnn());
+
+  ideep::tensor z;
+  auto op = ideep::eltwise_binary::eltwise_binary_op(1);
+  ideep::eltwise_binary::compute<AllocForMKLDNN>(op, x, y, z);
+
+  return new_with_itensor_mkldnn(std::move(z), self.options());;
 }
 
 Tensor& mkldnn_mul_(Tensor& self, const Tensor& other) {
-    return native::mkldnn_mul_out(self, self, other);
+  return native::mkldnn_mul_out(self, self, other);
 }
 
 } // namespace native
