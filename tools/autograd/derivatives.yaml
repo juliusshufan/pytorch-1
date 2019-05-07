@@ -1471,6 +1471,9 @@
 - name: mkldnn_max_pool2d(Tensor self, IntArrayRef kernel_size, IntArrayRef stride, IntArrayRef padding, IntArrayRef dilation, bool ceil_mode)
   self: mkldnn_max_pool2d_backward(grad, result, self, kernel_size, stride, padding, ceil_mode)
 
+- name: mkldnn_reshape(Tensor self, IntArrayRef shape)
+  self: grad.reshape(self.sizes())
+
 # fft
 - name: _fft_with_size(Tensor self, int64_t signal_ndim, bool complex_input, bool complex_output, bool inverse, IntArrayRef checked_signal_sizes, bool normalized, bool onesided, IntArrayRef output_sizes)
   self: fft_backward(self, grad, signal_ndim, complex_input, complex_output, inverse, checked_signal_sizes, normalized, onesided, output_sizes)
