@@ -15,7 +15,9 @@ Tensor mkldnn_to_dense(const Tensor& mkldnn_tensor) {
   Tensor cpu_tensor = at::empty(
     std::vector<int64_t>(dims.begin(), dims.end()),
     mkldnn_tensor.options().layout(c10::kStrided));
-  stensor.reorder_to(cpu_tensor.template data<float>());
+  if (!stensor.is_empty()) {
+    stensor.reorder_to(cpu_tensor.template data<float>());
+  }
   return cpu_tensor;
 }
 

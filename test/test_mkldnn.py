@@ -109,6 +109,32 @@ class TestMkldnn(TestCase):
                     conv2d(x),
                     mkldnn_conv2d(x.to_mkldnn()).to_dense())
 
+    def test_conv2d_backward(self):
+        for groups in [1, 4]:
+            N = torch.randint(3, 10, (1,)).item()
+            C = torch.randint(1, 3, (1,)).item() * groups
+            M = torch.randint(1, 3, (1,)).item() * groups
+            x = torch.randn(N, C, 224, 224, dtype=torch.float32) * 100
+            for bias in [False]:
+                conv2d = torch.nn.Conv2d(in_channels=C,
+                                         out_channels=M,
+                                         kernel_size=3,
+                                         stride=2,
+                                         padding=1,
+                                         bias=bias,
+                                         groups=groups).float()
+                mkldnn_conv2d = mkldnn_utils.to_mkldnn(copy.deepcopy(conv2d))
+                x1 = x.clone().requires_grad_()
+                x2 = x.clone().to_mkldnn().requires_grad_()
+                y1 = conv2d(x1).sum()
+                y2 = mkldnn_conv2d(x2).to_dense().sum()
+                y1.backward()
+                y2.backward()
+                self.assertEqual(x1.grad, x2.grad.to_dense())
+                self.assertEqual(conv2d.weight.grad.view(1,-1), mkldnn_conv2d.weight.grad.to_dense().view(1,-1))
+                if bias:
+                    self.assertEqual(conv2d.bias.grad, mkldnn_conv2d.bias.grad.to_dense())
+
     def test_relu(self):
         x = torch.randn((4, 5), dtype=torch.float32) * 10
         self.assertEqual(torch.relu(x), torch.relu(x.to_mkldnn()).to_dense())
