@@ -544,6 +544,7 @@ _(aten, reflection_pad2d) \
 _(aten, reflection_pad2d_backward) \
 _(aten, reflection_pad2d_forward) \
 _(aten, relu) \
+_(aten, relu_backward) \
 _(aten, remainder) \
 _(aten, renorm) \
 _(aten, repeat) \
