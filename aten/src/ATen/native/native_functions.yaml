@@ -3664,6 +3664,11 @@
     MkldnnCPU: mkldnn_adaptive_avg_pool2d
   requires_tensor: True
 
+- func: mkldnn_adaptive_avg_pool2d_backward(Tensor grad_output, Tensor self) -> Tensor
+  dispatch:
+    MkldnnCPU: mkldnn_adaptive_avg_pool2d_backward
+  requires_tensor: True
+
 - func: _adaptive_avg_pool2d(Tensor self, int[2] output_size) -> Tensor
   dispatch:
     CPU: adaptive_avg_pool2d_cpu

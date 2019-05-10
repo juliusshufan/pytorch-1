@@ -89,6 +89,20 @@ Tensor mkldnn_avg_pool2d_backward(
   AT_ERROR("mkldnn_avg_pool2d_backward: ATen not compiled with MKLDNN support");  
 }
 
+Tensor& mkldnn_adaptive_avg_pool2d_backward_out(
+    Tensor& grad_input,
+    const Tensor& grad_output,
+    const Tensor& input) {
+  AT_ERROR(
+    "mkldnn_adaptive_avg_pool2d_backward_out: ATen not compiled with MKLDNN support");
+}
+
+Tensor mkldnn_adaptive_avg_pool2d_backward(
+    const Tensor& grad_output,
+    const Tensor& input) {
+  AT_ERROR("mkldnn_adaptive_avg_pool2d_backward: ATen not compiled with MKLDNN support");
+}
+
 } // namespace native
 } // namespace at
 
@@ -301,6 +315,42 @@ Tensor& mkldnn_avg_pool2d_backward_out(
     bool count_include_pad) {
   AT_ERROR(
       "mkldnn_avg_pool2d_backward_out: in-place mkldnn operations are not supported yet");
+}
+
+Tensor mkldnn_adaptive_avg_pool2d_backward(
+    const Tensor& grad_output,
+    const Tensor& input) {
+  AT_ASSERTM(input.dim() == 4, "mkldnn_adaptive_avg_pool2d_backward: Expect 2D input");
+
+  auto output_size_vec = grad_output.sizes();
+  std::vector<int64_t> kernel_size(input.dim() - 2);
+  for (size_t i = 2; i < input.dim(); ++i) {
+    auto s1 = input.size(i);
+    auto s2 = output_size_vec[i];
+    AT_ASSERTM(s2 != 0, "output size can not be zero");
+    AT_ASSERTM(
+        s1 % s2 == 0,
+        "input size is not divisible by the output size is not supported yet");
+    kernel_size[i - 2] = s1 / s2;
+  }
+
+  return _mkldnn_pool2d_backward(
+      grad_output,
+      grad_output,
+      input,
+      kernel_size,
+      /*stride*/ kernel_size,
+      /*padding*/ {0, 0},
+      false,
+      /*algo*/ ideep::algorithm::pooling_avg);
+}
+
+Tensor& mkldnn_adaptive_avg_pool2d_backward_out(
+    Tensor& grad_input,
+    const Tensor& grad_output,
+    const Tensor& input) {
+  AT_ERROR(
+      "mkldnn_adaptive_avg_pool2d_backward_out: in-place mkldnn operations are not supported yet");
 }
 
 } // namespace native
