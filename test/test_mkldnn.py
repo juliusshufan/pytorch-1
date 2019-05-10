@@ -262,6 +262,26 @@ class TestMkldnn(TestCase):
             x.to_mkldnn().reshape(size).to_dense(),
         )
 
+    def test_reshape_backward(self):
+        x = torch.randn(3, 4, 5, dtype=torch.float32) * 10
+        size = (x.size(0), -1)
+
+        x1 = x.clone().requires_grad_()
+        x2 = x.clone().to_mkldnn().requires_grad_()
+
+        in_features = 20
+        out_features = out_features = torch.randint(3, 100, (1,)).item()
+        linear = torch.nn.Linear(in_features, out_features).float()
+
+        y1 = linear(x1.reshape(size)).sum()
+        y2 = linear(x2.reshape(size).to_dense()).sum()
+        y1.backward()
+        y2.backward()
+
+        self.assertEqual(
+            x1.grad,
+            x2.grad.to_dense())
+
     def test_clone(self):
         x = torch.randn(4, 5, dtype=torch.float32) * 10
         self.assertEqual(
