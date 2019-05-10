@@ -39,31 +39,44 @@ std::tuple<Tensor, Tensor, Tensor> mkldnn_batch_norm(
     bool train,
     double momentum,
     double eps) {
+  AT_ASSERTM(input.dim() == 4 || input.dim() == 5,
+             "mkldnn_batch_norm: currently mkldnn only support 2d and 3d batchnorm");
+  AT_ASSERTM(weight.defined() && bias.defined(),
+             "mkldnn_batch_norm: currently mkldnn only support affine model");
+
   ideep::tensor& x = itensor_from_mkldnn(input);
   ideep::tensor& w = itensor_from_mkldnn(weight);
   ideep::tensor& b = itensor_from_mkldnn(bias);
-  ideep::tensor& m = itensor_from_mkldnn(running_mean);
-  ideep::tensor& v = itensor_from_mkldnn(running_var);
 
+  bool use_running_stat = (running_mean.defined() && running_var.defined());
   ideep::tensor y;
 
   if (train) {
-    // TODO: support training
-    AT_ERROR("mkldnn_batch_norm: mkldnn training is not supported in yet.");
-
-    // ideep::tensor saved_mean;
-    // ideep::tensor saved_var;
-    // ideep::batch_normalization_forward_training::compute<AllocForMKLDNN>(
-    //     x, w, b, y, saved_mean, saved_var, m, v, momentum, eps);
-    // return std::make_tuple(
-    //     new_with_itensor_mkldnn(std::move(y), input.options()),
-    //     new_with_itensor_mkldnn(std::move(saved_mean), input.options()),
-    //     new_with_itensor_mkldnn(std::move(saved_var), input.options()));
+    ideep::tensor saved_mean;
+    ideep::tensor saved_var;
+    if (use_running_stat) {
+      ideep::tensor& m = itensor_from_mkldnn(running_mean);
+      ideep::tensor& v = itensor_from_mkldnn(running_var);
+      ideep::batch_normalization_forward_training::compute<AllocForMKLDNN>(
+          x, w, b, y, saved_mean, saved_var, m, v, momentum, eps);
+    } else {
+      ideep::batch_normalization_forward_training::compute<AllocForMKLDNN>(
+          x, w, b, y, saved_mean, saved_var, momentum, eps);
+    }
+    return std::make_tuple(
+        new_with_itensor_mkldnn(std::move(y), input.options()),
+        new_with_itensor_mkldnn(std::move(saved_mean), input.options()),
+        new_with_itensor_mkldnn(std::move(saved_var), input.options()));
   } else {
-    AT_ASSERTM(input.dim() == 4 || input.dim() == 5,
-               "mkldnn_batch_norm: currently mkldnn only support 2d and 3d batchnorm");
-    ideep::batch_normalization_forward_inference::compute<AllocForMKLDNN>(
-        x, m, v, w, b, y, eps);
+    if (use_running_stat) {
+      ideep::tensor& m = itensor_from_mkldnn(running_mean);
+      ideep::tensor& v = itensor_from_mkldnn(running_var);
+      ideep::batch_normalization_forward_inference::compute<AllocForMKLDNN>(
+          x, m, v, w, b, y, eps);
+    } else {
+      ideep::batch_normalization_forward_inference::compute<AllocForMKLDNN>(
+          x, w, b, y, eps);
+    }
     return std::make_tuple(
         new_with_itensor_mkldnn(std::move(y), input.options()),
         new_with_itensor_mkldnn(ideep::tensor{}, input.options()),
