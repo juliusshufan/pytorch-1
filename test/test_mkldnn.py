@@ -447,5 +447,13 @@ class TestMkldnn(TestCase):
             if bias:
                 self.assertEqual(linear.bias.grad, mkldnn_linear.bias.grad.to_dense())
 
+    def test_zero_(self):
+         x1 = torch.randn(4, 5, dtype=torch.float32) * 10
+         x2 = x1.clone().to_mkldnn()
+         self.assertEqual(
+             x1.zero_(),
+             x2.zero_().to_dense(),
+         )
+
 if __name__ == '__main__':
     run_tests()
