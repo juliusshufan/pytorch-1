@@ -20,6 +20,20 @@ std::tuple<Tensor, Tensor, Tensor> mkldnn_batch_norm(
   AT_ERROR("mkldnn_batch_norm: ATen not compiled with MKLDNN support");
 }
 
+std::tuple<Tensor, Tensor, Tensor> mkldnn_batch_norm_backward(
+    const Tensor& grad_output,
+    const Tensor& input,
+    const Tensor& weight,
+    const Tensor& running_mean,
+    const Tensor& running_var,
+    const Tensor& save_mean,
+    const Tensor& save_invstd,
+    bool train,
+    double eps,
+    std::array<bool,3> grad_input_mask) {
+  AT_ERROR("mkldnn_batch_norm_backward: ATen not compiled with MKLDNN support");
+}
+
 } // namespace native
 } // namespace at
 
@@ -82,6 +96,34 @@ std::tuple<Tensor, Tensor, Tensor> mkldnn_batch_norm(
         new_with_itensor_mkldnn(ideep::tensor{}, input.options()),
         new_with_itensor_mkldnn(ideep::tensor{}, input.options()));
   }
+}
+
+std::tuple<Tensor, Tensor, Tensor> mkldnn_batch_norm_backward(const Tensor& grad_output,
+    const Tensor& input,
+    const Tensor& weight,
+    const Tensor& running_mean,
+    const Tensor& running_var,
+    const Tensor& save_mean,
+    const Tensor& save_invstd,
+    bool train,
+    double eps,
+    std::array<bool,3> grad_input_mask) {
+  AT_ASSERTM(train, "mkldnn_batch_norm_backward: currently mkldnn only support train model");
+
+  ideep::tensor& grady = itensor_from_mkldnn(grad_output);
+  ideep::tensor& x = itensor_from_mkldnn(input);
+  ideep::tensor& w = itensor_from_mkldnn(weight);
+  ideep::tensor& m = itensor_from_mkldnn(save_mean);
+  ideep::tensor& v = itensor_from_mkldnn(save_invstd);
+
+  ideep::tensor gradx, gradw, gradb;
+  ideep::batch_normalization_backward::compute<AllocForMKLDNN>(
+      x, m, v, grady, w, gradx, gradw, gradb, eps);
+
+  return std::make_tuple(
+      new_with_itensor_mkldnn(std::move(gradx), input.options()),
+      new_with_itensor_mkldnn(std::move(gradw), input.options()),
+      new_with_itensor_mkldnn(std::move(gradb), input.options()));
 }
 
 } // namespace native
