@@ -2,6 +2,8 @@
 #include <ATen/Config.h>
 #include <ATen/NativeFunctions.h>
 #include <ATen/Parallel.h>
+#include <ATen/cpu/vec256/functional.h>
+#include <ATen/cpu/vec256/vec256.h>
 
 #if !AT_MKLDNN_ENABLED()
 
@@ -78,25 +80,24 @@ Tensor& mkldnn_add_(Tensor& self, const Tensor& other, Scalar alpha) {
 
 Tensor& mkldnn_mul_out(Tensor& result, const Tensor& self, const Tensor& other) {
   auto n = self.numel();
+  using Vec = vec256::Vec256<float>;
 
   ideep::tensor& z = itensor_from_mkldnn(result);
   ideep::tensor& x = itensor_from_mkldnn(self);
+  ideep::tensor y = other.is_mkldnn() ? itensor_from_mkldnn(other)
+      : itensor_from_mkldnn(other.expand_as(self).toType(CPU(kFloat)).to_mkldnn());
 
   auto* z_ = static_cast<float *>(z.get_data_handle());
   auto* x_ = static_cast<float *>(x.get_data_handle());
+  auto* y_ = static_cast<float *>(y.get_data_handle());
 
-  float* y_;
-  bool is_scalar = true;
-  if (other.ndimension() != 0) { 
-    is_scalar = false;
-    ideep::tensor& y = itensor_from_mkldnn(other);
-    y_ = static_cast<float *>(y.get_data_handle());
-  }
-
-  parallel_for(0, n, 1, [=](int64_t begin, int64_t end){
-    for (int64_t index = begin; index < end; index++) {
-      z_[index] = x_[index] * (is_scalar ?  other.item().to<float>(): y_[index]);
-    }
+  parallel_for(0, n, 2048, [z_, x_, y_](int64_t begin, int64_t end){
+    vec256::map2(
+      [](Vec a, Vec b) {return a * b;},
+      z_ + begin,
+      x_ + begin,
+      y_ + begin,
+      end - begin);
   });
 
   return result;
