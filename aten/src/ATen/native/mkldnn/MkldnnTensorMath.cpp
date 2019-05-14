@@ -1,6 +1,9 @@
 #include <ATen/ATen.h>
 #include <ATen/Config.h>
 #include <ATen/NativeFunctions.h>
+#include <ATen/Parallel.h>
+#include <ATen/cpu/vec256/functional.h>
+#include <ATen/cpu/vec256/vec256.h>
 
 #if !AT_MKLDNN_ENABLED()
 
@@ -22,8 +25,19 @@ namespace at {
 namespace native {
 
 Tensor& mkldnn_zero_(Tensor& self) {
+  auto n = self.numel();
+  using Vec = vec256::Vec256<float>;
+
   ideep::tensor& x = itensor_from_mkldnn(self);
-  memset(x.get_data_handle(), 0.0, x.get_size());
+  auto* x_ = static_cast<float *>(x.get_data_handle());
+  parallel_for(0, n, 2048, [x_](int64_t begin, int64_t end){
+    vec256::map(
+      [](Vec a) {return 0.0;},
+      x_ + begin,
+      x_ + begin,
+      end - begin);
+  });
+
   return self;
 }
 
