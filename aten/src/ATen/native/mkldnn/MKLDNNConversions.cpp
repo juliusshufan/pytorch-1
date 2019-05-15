@@ -15,7 +15,9 @@ Tensor mkldnn_to_dense(const Tensor& mkldnn_tensor) {
   Tensor cpu_tensor = at::empty(
     std::vector<int64_t>(dims.begin(), dims.end()),
     mkldnn_tensor.options().layout(c10::kStrided));
-  stensor.reorder_to(cpu_tensor.template data<float>());
+  if (!stensor.is_empty()) {
+    stensor.to_public(cpu_tensor.template data<float>());
+  }
   return cpu_tensor;
 }
 
@@ -28,9 +30,8 @@ Tensor dense_to_mkldnn(const Tensor& cpu_tensor) {
   auto cpu_tensor_cont = cpu_tensor.contiguous();
   Tensor mkldnn_tensor = new_with_sizes_mkldnn(cpu_tensor_cont.sizes(), cpu_tensor_cont.options());
   ideep::tensor& dtensor = itensor_from_mkldnn(mkldnn_tensor);
-  dtensor.reorder_from(dtensor.get_dims(),
-                       ideep::tensor::data_type::f32,
-                       (cpu_tensor_cont.template data<float>()));
+  dtensor.feed_from(dtensor.get_dims(), ideep::tensor::data_type::f32,
+      (cpu_tensor_cont.template data<float>()));
   return mkldnn_tensor;
 }
 
