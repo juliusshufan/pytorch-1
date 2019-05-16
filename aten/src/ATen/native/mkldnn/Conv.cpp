@@ -40,21 +40,6 @@ std::tuple<at::Tensor,at::Tensor,at::Tensor> mkldnn_convolution_backward(
 
 using namespace mkldnn;
 
-namespace {
-// Helper function for getting an ideep tensor out of an aten Tensor.
-// Note in case the aten Tensor is a dense tensor, the retured ideep
-// tensor is just a view of the storage of the aten dense tensor, so
-// caller needs to make sure the aten dense tensor's lifetime is
-// longer than the ideep tensor.
-inline ideep::tensor get_mkldnn_tensor(const at::Tensor& tensor) {
-  if (tensor.is_mkldnn()) {
-    return at::native::itensor_from_mkldnn(tensor);
-  } else {
-    return at::native::itensor_view_from_dense(tensor);
-  }
-}
-}
-
 namespace at { namespace native {
 
 ideep::tensor _mkldnn_conv2d(
