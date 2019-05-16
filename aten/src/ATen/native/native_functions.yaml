@@ -1170,6 +1170,10 @@
   dispatch:
     MkldnnCPU: mkldnn_max_pool2d
 
+- func: mkldnn_max_pool2d_backward(Tensor grad_output, Tensor output, Tensor input, int[2] kernel_size, int[2] stride=[], int[2] padding=0, bool ceil_mode=False) -> Tensor
+  dispatch:
+    MkldnnCPU: mkldnn_max_pool2d_backward
+
 - func: max_pool3d(Tensor self, int[3] kernel_size, int[3] stride=[], int[3] padding=0, int[3] dilation=1, bool ceil_mode=False) -> Tensor
 
 # FIXME: These could be combined as optional<ScalarType> but for https://github.com/pytorch/pytorch/issues/6593.
@@ -3652,6 +3656,11 @@
     MkldnnCPU: mkldnn_adaptive_avg_pool2d
   requires_tensor: True
 
+- func: mkldnn_adaptive_avg_pool2d_backward(Tensor grad_output, Tensor self) -> Tensor
+  dispatch:
+    MkldnnCPU: mkldnn_adaptive_avg_pool2d_backward
+  requires_tensor: True
+
 - func: _adaptive_avg_pool2d(Tensor self, int[2] output_size) -> Tensor
   dispatch:
     CPU: adaptive_avg_pool2d_cpu
@@ -3755,9 +3764,17 @@
 
 - func: avg_pool2d_backward(Tensor grad_output, Tensor self, int[2] kernel_size, int[2] stride, int[2] padding, bool ceil_mode, bool count_include_pad, *, Tensor(a!) grad_input) -> Tensor(a!)
   python_module: nn
+  dispatch:
+    CPU: avg_pool2d_backward_out
+    CUDA: avg_pool2d_backward_out
+    MkldnnCPU: mkldnn_avg_pool2d_backward_out
 
 - func: avg_pool2d_backward(Tensor grad_output, Tensor self, int[2] kernel_size, int[2] stride, int[2] padding, bool ceil_mode, bool count_include_pad) -> Tensor
   python_module: nn
+  dispatch:
+    CPU: avg_pool2d_backward
+    CUDA: avg_pool2d_backward
+    MkldnnCPU: mkldnn_avg_pool2d_backward
 
 - func: avg_pool3d(Tensor self, int[3] kernel_size, int[3] stride=[], int[3] padding=0, bool ceil_mode=False, bool count_include_pad=True, *, Tensor(a!) out) -> Tensor(a!)
   python_module: nn
