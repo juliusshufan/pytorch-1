@@ -8,6 +8,7 @@ def to_mkldnn(module):
     def t_fn(t):
         if t.is_floating_point():
             return t.to_mkldnn()
+        return t
 
     def m_fn(m):
         # TODO: This is a temporary hack to work around the fact that
@@ -39,5 +40,32 @@ def to_mkldnn(module):
                 m.stride,
                 m.dilation,
                 m.groups)
+
+    return module.apply(m_fn)
+
+def to_dense(module):
+    def t_fn(t):
+        # transfer mkldnn tensor internal format to public format first
+        if t.is_floating_point():
+            return torch._C._nn.mkldnn_weight_to_public(t).to_dense()
+        else:
+            return t
+
+    def m_fn(m):
+        for param in m._parameters.values():
+            if param is not None:
+                param.data = t_fn(param.data)
+                if param._grad is not None:
+                    param._grad.data = t_fn(param._grad.data)
+
+        for key, buf in m._buffers.items():
+            if buf is not None:
+                 m._buffers[key] = t_fn(buf)
+
+        if isinstance(m, torch.nn.Linear):
+            m.forward = functools.partial(
+                torch.nn.functional.linear,
+                weight=m.weight,
+                bias=m.bias)
 
     return module.apply(m_fn)

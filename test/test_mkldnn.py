@@ -105,9 +105,13 @@ class TestMkldnn(TestCase):
                                          bias=bias,
                                          groups=groups).float()
                 mkldnn_conv2d = mkldnn_utils.to_mkldnn(copy.deepcopy(conv2d))
+                dense_conv2d = mkldnn_utils.to_dense(copy.deepcopy(mkldnn_conv2d))
                 self.assertEqual(
                     conv2d(x),
                     mkldnn_conv2d(x.to_mkldnn()).to_dense())
+                self.assertEqual(
+                    conv2d(x),
+                    dense_conv2d(x))
 
     def test_conv2d_backward(self):
         for groups in [1, 4]:
@@ -124,16 +128,23 @@ class TestMkldnn(TestCase):
                                          bias=bias,
                                          groups=groups).float()
                 mkldnn_conv2d = mkldnn_utils.to_mkldnn(copy.deepcopy(conv2d))
+                dense_conv2d = mkldnn_utils.to_dense(copy.deepcopy(mkldnn_conv2d))
                 x1 = x.clone().requires_grad_()
                 x2 = x.clone().to_mkldnn().requires_grad_()
+                x3 = x.clone().requires_grad_()
                 y1 = conv2d(x1).sum()
                 y2 = mkldnn_conv2d(x2).to_dense().sum()
+                y3 = dense_conv2d(x3).sum()
                 y1.backward()
                 y2.backward()
+                y3.backward()
                 self.assertEqual(x1.grad, x2.grad.to_dense())
+                self.assertEqual(x1.grad, x3.grad)
                 self.assertEqual(conv2d.weight.grad.view(1,-1), mkldnn_conv2d.weight.grad.to_dense().view(1,-1))
+                self.assertEqual(conv2d.weight.grad, dense_conv2d.weight.grad)
                 if bias:
                     self.assertEqual(conv2d.bias.grad, mkldnn_conv2d.bias.grad.to_dense())
+                    self.assertEqual(conv2d.bias.grad, dense_conv2d.bias.grad)
 
     def test_relu(self):
         x = torch.randn((4, 5), dtype=torch.float32) * 10
@@ -268,9 +279,13 @@ class TestMkldnn(TestCase):
                     bn = torch.nn.BatchNorm2d(C, affine=affine,
                              track_running_stats=track_running_stats).float().train(train)
                     mkldnn_bn = mkldnn_utils.to_mkldnn(copy.deepcopy(bn))
+                    dense_bn = mkldnn_utils.to_dense(copy.deepcopy(mkldnn_bn))
                     self.assertEqual(
                         bn(x),
                         mkldnn_bn(x.to_mkldnn()).to_dense())
+                    self.assertEqual(
+                        bn(x),
+                        dense_bn(x))
 
     def test_batch_norm2d_backward(self):
         N = torch.randint(3, 10, (1,)).item()
@@ -282,17 +297,23 @@ class TestMkldnn(TestCase):
             for track_running_stats in [True, False]:
                 x1 = x.clone().requires_grad_()
                 x2 = x.clone().to_mkldnn().requires_grad_()
+                x3 = x.clone().requires_grad_()
                 bn = torch.nn.BatchNorm2d(C, affine=affine,
                         track_running_stats=track_running_stats).float().train(True)
                 mkldnn_bn = mkldnn_utils.to_mkldnn(copy.deepcopy(bn))
+                dense_bn = mkldnn_utils.to_dense(copy.deepcopy(mkldnn_bn))
                 y1 = bn(x1).sum()
                 y2 = mkldnn_bn(x2).to_dense().sum()
+                y3 = dense_bn(x3).sum()
                 y1.backward()
                 y2.backward()
+                y3.backward()
                 self.assertEqual(x1.grad, x2.grad.to_dense())
+                self.assertEqual(x1.grad, x3.grad)
                 if affine:
                     #self.assertAlmostEqual(bn.weight.grad, mkldnn_bn.weight.grad.to_dense())
                     self.assertEqual(bn.bias.grad, mkldnn_bn.bias.grad.to_dense())
+                    self.assertEqual(bn.bias.grad, dense_bn.bias.grad)
 
     def test_add(self):
         N = torch.randint(3, 10, (1,)).item()
@@ -424,9 +445,13 @@ class TestMkldnn(TestCase):
         for bias in [True, False]:
             linear = torch.nn.Linear(in_features, out_features).float()
             mkldnn_linear = mkldnn_utils.to_mkldnn(copy.deepcopy(linear))
+            dense_linear = mkldnn_utils.to_dense(copy.deepcopy(mkldnn_linear))
             self.assertEqual(
                 linear(x),
                 mkldnn_linear(x.to_mkldnn()).to_dense())
+            self.assertEqual(
+                linear(x),
+                dense_linear(x))
 
     def test_linear_backward(self):
         in_features = torch.randint(3, 10, (1,)).item()
@@ -436,16 +461,23 @@ class TestMkldnn(TestCase):
         for bias in [True, False]:
             x1 = x.clone().requires_grad_()
             x2 = x.clone().to_mkldnn().requires_grad_()
+            x3 = x.clone().requires_grad_()
             linear = torch.nn.Linear(in_features, out_features).float()
             mkldnn_linear = mkldnn_utils.to_mkldnn(copy.deepcopy(linear))
+            dense_linear = mkldnn_utils.to_dense(copy.deepcopy(mkldnn_linear))
             y1 = linear(x1).sum()
             y2 = mkldnn_linear(x2).to_dense().sum()
+            y3 =  dense_linear(x3).sum()
             y1.backward()
             y2.backward()
+            y3.backward()
             self.assertEqual(x1.grad, x2.grad.to_dense())
+            self.assertEqual(x1.grad, x3.grad)
             self.assertEqual(linear.weight.grad, mkldnn_linear.weight.grad.to_dense())
+            self.assertEqual(linear.weight.grad, dense_linear.weight.grad)
             if bias:
                 self.assertEqual(linear.bias.grad, mkldnn_linear.bias.grad.to_dense())
+                self.assertEqual(linear.bias.grad, dense_linear.bias.grad)
 
     def test_zero_(self):
          x1 = torch.randn(4, 5, dtype=torch.float32) * 10

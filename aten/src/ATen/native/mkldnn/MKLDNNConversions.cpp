@@ -71,6 +71,14 @@ Tensor mkldnn_reorder_conv2d_weight(
   return new_with_itensor_mkldnn(std::move(result), self.options());
 }
 
+Tensor mkldnn_weight_to_public(const Tensor& self) {
+  ideep::tensor w = itensor_from_mkldnn(self);
+  ideep::tensor result = w.to_public();
+  result.make_ungroup();
+
+  return new_with_itensor_mkldnn(std::move(result), self.options());
+}
+
 #else
 
 Tensor mkldnn_to_dense(const Tensor& mkldnn_tensor) {
@@ -88,6 +96,10 @@ Tensor mkldnn_reorder_conv2d_weight(
     IntArrayRef dilation,
     int64_t groups) {
   AT_ERROR("mkldnn_reorder_conv2d_weight: MKL-DNN build is disabled");
+}
+
+Tensor mkldnn_weight_to_public(const Tensor& self) {
+  AT_ERROR("mkldnn_weight_to_public: MKL-DNN build is disabled");
 }
 
 #endif // AT_MKLDNN_ENABLED()
