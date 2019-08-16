@@ -77,7 +77,8 @@ Tensor& mkldnn_avg_pool2d_backward_out(
     IntArrayRef stride,
     IntArrayRef padding,
     bool ceil_mode,
-    bool count_include_pad) {
+    bool count_include_pad,
+    c10::optional<int64_t> divisor_override) {
   AT_ERROR(
       "mkldnn_avg_pool2d_backward_out: ATen not compiled with MKLDNN support");
 }
@@ -89,7 +90,8 @@ Tensor mkldnn_avg_pool2d_backward(
     IntArrayRef stride,
     IntArrayRef padding,
     bool ceil_mode,
-    bool count_include_pad) {
+    bool count_include_pad,
+    c10::optional<int64_t> divisor_override) {
   AT_ERROR("mkldnn_avg_pool2d_backward: ATen not compiled with MKLDNN support");
 }
 
@@ -381,7 +383,8 @@ Tensor mkldnn_avg_pool2d_backward(
     IntArrayRef stride,
     IntArrayRef padding,
     bool ceil_mode,
-    bool count_include_pad) {
+    bool count_include_pad,
+    c10::optional<int64_t> divisor_override) {
   return _mkldnn_pool2d_backward(
       grad_output,
       grad_output,
@@ -403,7 +406,8 @@ Tensor& mkldnn_avg_pool2d_backward_out(
     IntArrayRef stride,
     IntArrayRef padding,
     bool ceil_mode,
-    bool count_include_pad) {
+    bool count_include_pad,
+    c10::optional<int64_t> divisor_override) {
   AT_ERROR(
       "mkldnn_avg_pool2d_backward_out: in-place mkldnn operations are not supported yet");
 }
